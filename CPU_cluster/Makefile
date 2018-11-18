@@ -17,6 +17,9 @@ all : clean $(targets)
 benchmark-naive : check.o benchmark.o stencil-naive.o
 	$(CC) -o $@ $^ $(LDLIBS)
 
+benchmark-naive : test.o
+	$(CC) -o $@ $^ $(LDLIBS)
+	
 benchmark-optimized : check.o benchmark.o stencil-optimized.o
 	$(CC) -o $@ $^ $(LDLIBS)
 

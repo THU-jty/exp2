@@ -50,7 +50,7 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 				int Ys = min( YY, y_end-yy );
 				for( int xx = x_start; xx < x_end; xx += XX ){
 					int Xs = min( XX, x_end-xx );
-					for(int z = zz; z < ZZ+Zs; ++z)
+					for(int z = zz; z < zz+Zs; ++z)
 					for(int y = yy; y < yy+Ys; ++y) {
 						for(int x = xx; x < xx+Xs; ++x) {
 							a1[INDEX(x, y, z, ldx, ldy)] \
@@ -88,7 +88,6 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 				}
 			}
         }
-    }
 */
 
 ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt) {
