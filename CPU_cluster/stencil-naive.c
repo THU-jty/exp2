@@ -1,7 +1,7 @@
 #include "common.h"
 #include <omp.h>
-#define XX 8
-#define YY 8
+#define XX 64
+#define YY 64
 #define ZZ 16
 #define min(a,b) (((a)<(b))?(a):(b))
 
@@ -44,11 +44,13 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
         cptr_t a0 = buffer[t % 2];
         ptr_t a1 = buffer[(t + 1) % 2];
 #pragma omp parallel for schedule (dynamic)
-        for(int z = z_start; z < z_end; ++z) {
+        for(int zz = z_start; zz < z_end; zz += ZZ) {
+			int Zs = min( ZZ, z_end-zz );
 			for( int yy = y_start; yy < y_end; yy += YY ){
 				int Ys = min( YY, y_end-yy );
 				for( int xx = x_start; xx < x_end; xx += XX ){
 					int Xs = min( XX, x_end-xx );
+					for(int z = zz; z < ZZ+Zs; ++z)
 					for(int y = yy; y < yy+Ys; ++y) {
 						for(int x = xx; x < xx+Xs; ++x) {
 							a1[INDEX(x, y, z, ldx, ldy)] \
@@ -64,9 +66,30 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 				}
 			}
         }
+		
+		
     }
     return buffer[nt % 2];
 }
+
+/*
+#pragma omp parallel for schedule (dynamic)
+        for(int y = y_start; y < y_end; ++y) {
+			for(int z = z_start; z < z_end; ++z) {
+				for(int x = x_start; x < x_end; ++x) {
+					a1[INDEX(x, y, z, ldx, ldy)] \
+						= ALPHA_ZZZ * a0[INDEX(x, y, z, ldx, ldy)] \
+						+ ALPHA_NZZ * a0[INDEX(x-1, y, z, ldx, ldy)] \
+						+ ALPHA_PZZ * a0[INDEX(x+1, y, z, ldx, ldy)] \
+						+ ALPHA_ZNZ * a0[INDEX(x, y-1, z, ldx, ldy)] \
+						+ ALPHA_ZPZ * a0[INDEX(x, y+1, z, ldx, ldy)] \
+						+ ALPHA_ZZN * a0[INDEX(x, y, z-1, ldx, ldy)] \
+						+ ALPHA_ZZP * a0[INDEX(x, y, z+1, ldx, ldy)];
+				}
+			}
+        }
+    }
+*/
 
 ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt) {
     ptr_t buffer[2] = {grid, aux};
