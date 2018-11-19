@@ -8,16 +8,6 @@ const char* version_name = "Optimized version";
 
 /* your implementation */
 void create_dist_grid(dist_grid_info_t *grid_info, int stencil_type) {
-	if(grid_info->p_id == 0) {
-        grid_info->local_size_x = grid_info->global_size_x;
-        grid_info->local_size_y = grid_info->global_size_y;
-        grid_info->local_size_z = grid_info->global_size_z;
-    } else {
-        grid_info->local_size_x = 0;
-        grid_info->local_size_y = 0;
-        grid_info->local_size_z = 0;
-    }
-	
 	int pnum = grid_info->p_num;
 	grid_info->local_size_x = grid_info->global_size_x;
 	grid_info->local_size_y = grid_info->global_size_y;
@@ -58,28 +48,34 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 	//printf("rank %d pnum %d\n", rank, pnum);
 	MPI_Status  sta[4];
     MPI_Request req[4];
+	MPI_Datatype plane;
+    MPI_Type_vector(ly,lx,ldx,MPI_DOUBLE,&plane);
+    MPI_Type_commit(&plane);
 	
+	omp_set_num_threads(8);
 	for(int t = 0; t < nt; ++t) {
         cptr_t a0 = buffer[t % 2];
         ptr_t a1 = buffer[(t + 1) % 2];
-		if( rank == pnum-1 ){
-			MPI_Isend( a0+ldy*ldx, ldy*ldx, MPI_DOUBLE, rank-1, 0, MPI_COMM_WORLD, &req[0] );
-			MPI_Irecv( a0, ldx*ldy, MPI_DOUBLE, rank-1, 1, MPI_COMM_WORLD, &req[1] );
+		//if( pnum == 1 ){  }
+		 if( rank == pnum-1 ){
+			MPI_Isend( a0+ldy*ldx+ldx+1, 1, plane, rank-1, 0, MPI_COMM_WORLD, &req[0] );
+			MPI_Irecv( a0+ldx+1, 1, plane, rank-1, 1, MPI_COMM_WORLD, &req[1] );
 			MPI_Waitall( 2, req, sta );
 		}
 		else if( rank == 0 ){
-			MPI_Isend( a0+ldy*ldx*lz, ldy*ldx, MPI_DOUBLE, rank+1, 1, MPI_COMM_WORLD, &req[2] );
-			MPI_Irecv( a0+ldy*ldx*(lz+1), ldx*ldy, MPI_DOUBLE, rank+1, 0, MPI_COMM_WORLD, &req[3] );
+			MPI_Isend( a0+ldy*ldx*lz+ldx+1, 1, plane, rank+1, 1, MPI_COMM_WORLD, &req[2] );
+			MPI_Irecv( a0+ldy*ldx*(lz+1)+ldx+1, 1, plane, rank+1, 0, MPI_COMM_WORLD, &req[3] );
 			MPI_Waitall( 2, &req[2], &sta[2] );
 		}
 		else{
-			MPI_Isend( a0+ldy*ldx, ldy*ldx, MPI_DOUBLE, rank-1, 0, MPI_COMM_WORLD, &req[0] );
-			MPI_Irecv( a0, ldx*ldy, MPI_DOUBLE, rank-1, 1, MPI_COMM_WORLD, &req[1] );
+			MPI_Isend( a0+ldy*ldx+ldx+1, 1, plane, rank-1, 0, MPI_COMM_WORLD, &req[0] );
+			MPI_Irecv( a0+ldx+1, 1, plane, rank-1, 1, MPI_COMM_WORLD, &req[1] );
 			
-			MPI_Isend( a0+ldy*ldx*lz, ldy*ldx, MPI_DOUBLE, rank+1, 1, MPI_COMM_WORLD, &req[2] );
-			MPI_Irecv( a0+ldy*ldx*(lz+1), ldx*ldy, MPI_DOUBLE, rank+1, 0, MPI_COMM_WORLD, &req[3] );
+			MPI_Isend( a0+ldy*ldx*lz+ldx+1, 1, plane, rank+1, 1, MPI_COMM_WORLD, &req[2] );
+			MPI_Irecv( a0+ldy*ldx*(lz+1)+ldx+1, 1, plane, rank+1, 0, MPI_COMM_WORLD, &req[3] );
 			MPI_Waitall( 4, req, sta );
 		}
+#pragma omp parallel for schedule (dynamic)
 		for(int z = z_start; z < z_end; ++z) {
 			for(int y = y_start; y < y_end; ++y) {
 				for(int x = x_start; x < x_end; ++x) {
