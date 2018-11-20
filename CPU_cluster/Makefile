@@ -5,8 +5,8 @@ CFLAGS = -Wall -std=c99 $(OPT) -qopenmp
 LDFLAGS = -Wall -qopenmp
 LDLIBS = $(LDFLAGS)
 
-targets = benchmark-naive benchmark-optimized benchmark-3D
-objects = check.o benchmark.o stencil-naive.o stencil-optimized.o 3D.o
+targets = benchmark-naive benchmark-optimized benchmark-3D benchmark-cir
+objects = check.o benchmark.o stencil-naive.o stencil-optimized.o 3D.o circular.o
 
 .PHONY : default
 default : all
@@ -16,6 +16,9 @@ all : clean $(targets)
 
 benchmark-naive : check.o benchmark.o stencil-naive.o
 	$(CC) -o $@ $^ $(LDLIBS)
+	
+benchmark-cir : check.o benchmark.o circular.o
+	$(CC) -o $@ $^ $(LDLIBS)	
 
 test : test.o
 	$(CC) -o $@ $^ $(LDLIBS)
