@@ -43,18 +43,18 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 	int lz = grid_info->local_size_z;
 	
 	int cir = grid_info->halo_size_x;
-	int t_sp = cir, y_sp = 4, z_sp = 64;
+	int t_sp = cir, y_sp = 4, z_sp = lz;
 	double *a;
 	double* p[10][3];
 	a = ( double * )malloc( sizeof(double)*(t_sp-1)*ldx*(y_sp+2*cir)*3 );
-	for( int i = 0; i < t_sp-2; i ++ ){
+	for( int i = 0; i < t_sp-1; i ++ ){
 		for( int j = 0; j < 3; j ++ ){
 			p[i+1][j] = &a[ (i*3+j)*ldx*(y_sp+2*cir) ];
 		}
 	}
 	int nw = 0;
 	for( int tt = 0; tt < nt; tt += t_sp ){
-		cptr_t a0 = buffer[nw];
+		ptr_t a0 = buffer[nw];
         ptr_t a1 = buffer[nw^1];
 		nw ^= 1;
 		int step = min( t_sp, nt-tt );
@@ -66,18 +66,18 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 					p[0][k%3] = &a0[INDEX(0, yy-cir, k, ldx, ldy)];
 					if( ss <= 0 ) continue;
 					if( ss == step )
-						p[ss][(k-ss%3+3)%3] = &a1[INDEX(0, yy-cir, k-ss, ldx, ldy)];
+						p[ss][(k-ss)%3] = &a1[INDEX(0, yy-cir, k-ss, ldx, ldy)];
 					for( int s = 1; s <= ss; s ++ ){
-						for( int y = -cir+s; y < y_sp+cir-s; y ++ )
-							for( int x = -cir+s; x < lx+cir-s; x ++ )
-								p[s][(k-s%3+3)%3][INDEX(x, y, 0, ldx, ldy)] \
-								= ALPHA_ZZZ * p[s-1][ ( k-s%3+3 )%3 ][INDEX(x, y, 0, ldx, ldy)] \
-								+ ALPHA_NZZ * p[s-1][ ( k-s%3+3 )%3 ][INDEX(x-1, y, 0, ldx, ldy)] \
-								+ ALPHA_PZZ * p[s-1][ ( k-s%3+3 )%3 ][INDEX(x+1, y, 0, ldx, ldy)] \
-								+ ALPHA_ZNZ * p[s-1][ ( k-s%3+3 )%3 ][INDEX(x, y-1, 0, ldx, ldy)] \
-								+ ALPHA_ZPZ * p[s-1][ ( k-s%3+3 )%3 ][INDEX(x, y+1, 0, ldx, ldy)] \
-								+ ALPHA_ZZN * p[s-1][ ( k-(s+1)%3+3 )%3 ][INDEX(x, y, 0, ldx, ldy)] \
-								+ ALPHA_ZZP * p[s-1][ ( k-(s-1)%3+3 )%3 ][INDEX(x, y, 0, ldx, ldy)];
+						for( int y = s; y < y_sp+2*cir-s; y ++ )
+							for( int x = s; x < lx+2*cir-s; x ++ )
+								p[s][(k-s)%3][INDEX(x, y, 0, ldx, ldy)] \
+								= ALPHA_ZZZ * p[s-1][ ( k-s )%3 ][INDEX(x, y, 0, ldx, ldy)] \
+								+ ALPHA_NZZ * p[s-1][ ( k-s )%3 ][INDEX(x-1, y, 0, ldx, ldy)] \
+								+ ALPHA_PZZ * p[s-1][ ( k-s )%3 ][INDEX(x+1, y, 0, ldx, ldy)] \
+								+ ALPHA_ZNZ * p[s-1][ ( k-s )%3 ][INDEX(x, y-1, 0, ldx, ldy)] \
+								+ ALPHA_ZPZ * p[s-1][ ( k-s )%3 ][INDEX(x, y+1, 0, ldx, ldy)] \
+								+ ALPHA_ZZN * p[s-1][ ( k-(s+1) )%3 ][INDEX(x, y, 0, ldx, ldy)] \
+								+ ALPHA_ZZP * p[s-1][ ( k-(s-1) )%3 ][INDEX(x, y, 0, ldx, ldy)];
 					}
 				}
 				
