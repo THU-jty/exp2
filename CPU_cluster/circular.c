@@ -44,7 +44,7 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 	int lz = grid_info->local_size_z;
 
 	int cir = grid_info->halo_size_x;
-	int t_sp = cir, y_sp = 4, z_sp = lz, x_sp = 64;
+	int t_sp = cir, y_sp = 8, z_sp = lz, x_sp = 128;
 
 	int llx = x_sp+2*cir;
 	double *a;
@@ -60,7 +60,7 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
         }
 	int nw = 0;
 	omp_set_num_threads(num_t);
-	for( int tt = 0; tt < nt; tt += t_sp ){
+	for( int tt = 0; tt < nt; tt += t_sp ){	
 		ptr_t a0 = buffer[nw];
         ptr_t a1 = buffer[nw^1];
 		nw ^= 1;
@@ -103,6 +103,10 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 								continue;
 							}
 							int y0, y1, x0, x1;
+							int s0, s1, s2;
+							s0 = (k-s)%3;
+							s1 = (k-s-1)%3;
+							s2 = (k-s+1)%3;
 	#ifdef __OUT
 							printf("x %d y %d z %d step %d:\n", xx, yy, k-s, s);
 	#endif
@@ -113,14 +117,14 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 							for( int y = y0; y < y1; y ++ ){
 								//for( int x = s; x < lx+2*cir-s; x ++ ){p[id][s-1][ ( k-s )%3 ][x+prex*y]
 								for( int x = x0; x < x1; x ++ ){
-									p[id][s][(k-s)%3][INDEX(x, y, 0, px, ldy)] \
-									= ALPHA_ZZZ * p[id][s-1][ ( k-s )%3 ][INDEX(x, y, 0, prex, ldy)]
-									+ ALPHA_NZZ * p[id][s-1][ ( k-s )%3 ][INDEX(x-1, y, 0, prex, ldy)]
-									+ ALPHA_PZZ * p[id][s-1][ ( k-s )%3 ][INDEX(x+1, y, 0, prex, ldy)]
-									+ ALPHA_ZNZ * p[id][s-1][ ( k-s )%3 ][INDEX(x, y-1, 0, prex, ldy)]
-									+ ALPHA_ZPZ * p[id][s-1][ ( k-s )%3 ][INDEX(x, y+1, 0, prex, ldy)]
-									+ ALPHA_ZZN * p[id][s-1][ ( k-(s+1) )%3 ][INDEX(x, y, 0, prex, ldy)]
-									+ ALPHA_ZZP * p[id][s-1][ ( k-(s-1) )%3 ][INDEX(x, y, 0, prex, ldy)];
+									p[id][s][s0][INDEX(x, y, 0, px, ldy)] \
+									= ALPHA_ZZZ * p[id][s-1][s0][INDEX(x, y, 0, prex, ldy)]
+									+ ALPHA_NZZ * p[id][s-1][s0][INDEX(x-1, y, 0, prex, ldy)]
+									+ ALPHA_PZZ * p[id][s-1][s0][INDEX(x+1, y, 0, prex, ldy)]
+									+ ALPHA_ZNZ * p[id][s-1][s0][INDEX(x, y-1, 0, prex, ldy)]
+									+ ALPHA_ZPZ * p[id][s-1][s0][INDEX(x, y+1, 0, prex, ldy)]
+									+ ALPHA_ZZN * p[id][s-1][s1][INDEX(x, y, 0, prex, ldy)]
+									+ ALPHA_ZZP * p[id][s-1][s2][INDEX(x, y, 0, prex, ldy)];
 								}
 							}
 	#ifdef __OUT

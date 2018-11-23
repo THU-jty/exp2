@@ -205,6 +205,7 @@ ptr_t memory_alloc(const dist_grid_info_t *info) {
     CHECK_ERROR(ret, NULL)
     /* zeroing halos */
     set_zero(tmp+INDEX(0,0,0,nx,ny), nx*ny*info->halo_size_z);
+//#pragma omp parallel for 
     for(int z = z_start; z < z_end; ++z) {
         set_zero(tmp+INDEX(0,0,z,nx,ny), nx*info->halo_size_y);
         for(int y = y_start; y < y_end; ++y) {
