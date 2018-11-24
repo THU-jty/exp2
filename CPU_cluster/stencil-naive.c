@@ -110,7 +110,8 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
         for(int zz = z_start; zz < z_end; zz += ZZ) {
 			for( int yy = y_start; yy < y_end; yy += YY ){
 				for( int xx = x_start; xx < x_end; xx += XX ){
-					for(int z = zz; z < zz+ZZ; ++z)
+					//for(int z = zz; z < zz+ZZ; ++z)
+					int z = zz;
 					for(int y = yy; y < yy+YY; ++y) {
 						for(int x = xx; x < xx+XX; ++x) {
                     a1[INDEX(x, y, z, ldx, ldy)] \

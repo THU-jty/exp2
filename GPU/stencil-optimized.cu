@@ -4,23 +4,245 @@
 
 const char* version_name = "Optimized version";
 
-/* your implementation */
+const int halo = 1;
+
 void create_dist_grid(dist_grid_info_t *grid_info, int stencil_type) {
-    puts("not implemented");
-    exit(1);
+    grid_info->halo_size_x = halo;
+    grid_info->halo_size_y = halo;
+    grid_info->halo_size_z = halo;
 }
 
-/* your implementation */
 void destroy_dist_grid(dist_grid_info_t *grid_info) {
 
 }
 
-/* your implementation */
-ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt) {
-    return grid;
+#define XX 64
+#define YY 4
+#define ZZ 4
+#define lenx (XX+halo*2)
+#define leny (YY+halo*2)
+#define lenz (ZZ+halo*2)
+#define BLOCK_SIZE 9
+
+//#define __HALO
+
+__global__ void stencil_7_naive_kernel_1step(cptr_t in, ptr_t out, \
+                                int nx, int ny, int nz, \
+                                int halo_x, int halo_y, int halo_z) {
+    int tx = threadIdx.x + blockDim.x * blockIdx.x;
+    int ty = threadIdx.y + blockDim.y * blockIdx.y;
+    int tz = threadIdx.z + blockDim.z * blockIdx.z;
+    if(tx < nx && ty < ny && tz < nz) {
+        int ldx = nx + halo_x * 2;
+        int ldy = ny + halo_y * 2;
+        int ldz = nz + halo_z * 2;
+        int x = tx + halo_x;
+        int y = ty + halo_y;
+        int z = tz + halo_z;
+#ifdef __HALO		
+		__shared__ double sub[lenx*leny*lenz];
+		
+		int xx = threadIdx.x+halo;
+		int yy = threadIdx.y+halo;
+		int zz = threadIdx.z+halo;
+		
+		sub[ INDEX( xx, yy, zz, lenx, leny ) ] = in[ INDEX(x, y, z, ldx, ldy) ];
+		if( xx == 1 ) 	sub[ INDEX( xx-1, yy, zz, lenx, leny ) ] = in[ INDEX(x-1, y, z, ldx, ldy) ];
+		if( xx == XX ) 	sub[ INDEX( xx+1, yy, zz, lenx, leny ) ] = in[ INDEX(x+1, y, z, ldx, ldy) ];
+		if( yy == 1 )	sub[ INDEX( xx, yy-1, zz, lenx, leny ) ] = in[ INDEX(x, y-1, z, ldx, ldy) ];
+		if( yy == YY ) 	sub[ INDEX( xx, yy+1, zz, lenx, leny ) ] = in[ INDEX(x, y+1, z, ldx, ldy) ];
+		if( zz == 1 )	sub[ INDEX( xx, yy, zz-1, lenx, leny ) ] = in[ INDEX(x, y, z-1, ldx, ldy) ];
+		if( zz == ZZ ) 	sub[ INDEX( xx, yy, zz+1, lenx, leny ) ] = in[ INDEX(x, y, z+1, ldx, ldy) ];	
+		
+		__syncthreads(); 
+		
+        out[INDEX(x, y, z, ldx, ldy)] \
+            = ALPHA_ZZZ * sub[ INDEX( xx, yy, zz, lenx, leny ) ] \
+            + ALPHA_NZZ * sub[ INDEX( xx-1, yy, zz, lenx, leny ) ] \
+            + ALPHA_PZZ * sub[ INDEX( xx+1, yy, zz, lenx, leny ) ] \
+            + ALPHA_ZNZ * sub[ INDEX( xx, yy-1, zz, lenx, leny ) ] \
+            + ALPHA_ZPZ * sub[ INDEX( xx, yy+1, zz, lenx, leny ) ] \
+            + ALPHA_ZZN * sub[ INDEX( xx, yy, zz-1, lenx, leny ) ] \
+            + ALPHA_ZZP * sub[ INDEX( xx, yy, zz+1, lenx, leny ) ];
+			
+#else
+		__shared__ double sub[XX*YY*ZZ];
+		
+		int xx = threadIdx.x;
+		int yy = threadIdx.y;
+		int zz = threadIdx.z;
+		sub[ INDEX( xx, yy, zz, XX, YY ) ] = in[ INDEX(x, y, z, ldx, ldy) ];
+		
+		__syncthreads(); 
+		
+        out[INDEX(x, y, z, ldx, ldy)] \
+            = ALPHA_ZZZ * sub[ INDEX( xx, yy, zz, XX, YY ) ] \
+			+ ALPHA_NZZ * in[INDEX(x-1, y, z, ldx, ldy)] \
+            + ALPHA_PZZ * in[INDEX(x+1, y, z, ldx, ldy)] \
+            + ALPHA_ZNZ * in[INDEX(x, y-1, z, ldx, ldy)] \
+            + ALPHA_ZPZ * in[INDEX(x, y+1, z, ldx, ldy)] \
+            + ALPHA_ZZN * in[INDEX(x, y, z-1, ldx, ldy)] \
+            + ALPHA_ZZP * in[INDEX(x, y, z+1, ldx, ldy)] ;
+
+#endif
+    }
 }
 
-/* your implementation */
+/*
+    int tx = blockIdx.x + gridDim.x * threadIdx.x;
+    int ty = blockIdx.y + gridDim.y * threadIdx.y;
+    int tz = blockIdx.z + gridDim.z * threadIdx.z;
+	
+	
+	            + ALPHA_NZZ * sub[ INDEX( xx-1, yy, zz, len, len ) ] \
+            + ALPHA_PZZ * sub[ INDEX( xx+1, yy, zz, len, len ) ] \
+            + ALPHA_ZNZ * sub[ INDEX( xx, yy-1, zz, len, len ) ] \
+            + ALPHA_ZPZ * sub[ INDEX( xx, yy+1, zz, len, len ) ] \
+            + ALPHA_ZZN * sub[ INDEX( xx, yy, zz-1, len, len ) ] \
+            + ALPHA_ZZP * sub[ INDEX( xx, yy, zz+1, len, len ) ];
+	
+	
+	            + ALPHA_NZZ * in[INDEX(x-1, y, z, ldx, ldy)] \
+            + ALPHA_PZZ * in[INDEX(x+1, y, z, ldx, ldy)] \
+            + ALPHA_ZNZ * in[INDEX(x, y-1, z, ldx, ldy)] \
+            + ALPHA_ZPZ * in[INDEX(x, y+1, z, ldx, ldy)] \
+            + ALPHA_ZZN * in[INDEX(x, y, z-1, ldx, ldy)] \
+            + ALPHA_ZZP * in[INDEX(x, y, z+1, ldx, ldy)] \
+			
+        out[INDEX(x, y, z, ldx, ldy)] \
+            = ALPHA_ZZZ * in[INDEX(x, y, z, ldx, ldy)] \
+            + ALPHA_NZZ * in[INDEX(x-1, y, z, ldx, ldy)] \
+            + ALPHA_PZZ * in[INDEX(x+1, y, z, ldx, ldy)] \
+            + ALPHA_ZNZ * in[INDEX(x, y-1, z, ldx, ldy)] \
+            + ALPHA_ZPZ * in[INDEX(x, y+1, z, ldx, ldy)] \
+            + ALPHA_ZZN * in[INDEX(x, y, z-1, ldx, ldy)] \
+            + ALPHA_ZZP * in[INDEX(x, y, z+1, ldx, ldy)] \
+            + ALPHA_NNZ * in[INDEX(x-1, y-1, z, ldx, ldy)] \
+            + ALPHA_PNZ * in[INDEX(x+1, y-1, z, ldx, ldy)] \
+            + ALPHA_NPZ * in[INDEX(x-1, y+1, z, ldx, ldy)] \
+            + ALPHA_PPZ * in[INDEX(x+1, y+1, z, ldx, ldy)] \
+            + ALPHA_NZN * in[INDEX(x-1, y, z-1, ldx, ldy)] \
+            + ALPHA_PZN * in[INDEX(x+1, y, z-1, ldx, ldy)] \
+            + ALPHA_NZP * in[INDEX(x-1, y, z+1, ldx, ldy)] \
+            + ALPHA_PZP * in[INDEX(x+1, y, z+1, ldx, ldy)] \
+            + ALPHA_ZNN * in[INDEX(x, y-1, z-1, ldx, ldy)] \
+            + ALPHA_ZPN * in[INDEX(x, y+1, z-1, ldx, ldy)] \
+            + ALPHA_ZNP * in[INDEX(x, y-1, z+1, ldx, ldy)] \
+            + ALPHA_ZPP * in[INDEX(x, y+1, z+1, ldx, ldy)] \
+            + ALPHA_NNN * in[INDEX(x-1, y-1, z-1, ldx, ldy)] \
+            + ALPHA_PNN * in[INDEX(x+1, y-1, z-1, ldx, ldy)] \
+            + ALPHA_NPN * in[INDEX(x-1, y+1, z-1, ldx, ldy)] \
+            + ALPHA_PPN * in[INDEX(x+1, y+1, z-1, ldx, ldy)] \
+            + ALPHA_NNP * in[INDEX(x-1, y-1, z+1, ldx, ldy)] \
+            + ALPHA_PNP * in[INDEX(x+1, y-1, z+1, ldx, ldy)] \
+            + ALPHA_NPP * in[INDEX(x-1, y+1, z+1, ldx, ldy)] \
+            + ALPHA_PPP * in[INDEX(x+1, y+1, z+1, ldx, ldy)];
+*/
+
+inline int ceiling(int num, int den) {
+    return (num - 1) / den + 1;
+}
+
+ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt) {
+    ptr_t buffer[2] = {grid, aux};
+    int nx = grid_info->global_size_x;
+    int ny = grid_info->global_size_y;
+    int nz = grid_info->global_size_z;
+    dim3 grid_size (ceiling(nx, XX), ceiling(ny, YY), ceiling(nz, ZZ));
+    dim3 block_size (XX, YY, ZZ);
+    for(int t = 0; t < nt; ++t) {
+        stencil_7_naive_kernel_1step<<<grid_size, block_size>>>(\
+            buffer[t % 2], buffer[(t + 1) % 2], nx, ny, nz, \
+                grid_info->halo_size_x, grid_info->halo_size_y, grid_info->halo_size_z);
+    }
+    return buffer[nt % 2];
+}
+
+
+__global__ void stencil_27_naive_kernel_1step(cptr_t in, ptr_t out, \
+                                int nx, int ny, int nz, \
+                                int halo_x, int halo_y, int halo_z) {
+    int tx = threadIdx.x + blockDim.x * blockIdx.x;
+    int ty = threadIdx.y + blockDim.y * blockIdx.y;
+    int tz = threadIdx.z + blockDim.z * blockIdx.z;
+    if(tx < nx && ty < ny && tz < nz) {
+        int ldx = nx + halo_x * 2;
+        int ldy = ny + halo_y * 2;
+        int x = tx + halo_x;
+        int y = ty + halo_y;
+        int z = tz + halo_z;
+		__shared__ double sub[lenx*leny*lenz];
+		
+		int xx = threadIdx.x+halo;
+		int yy = threadIdx.y+halo;
+		int zz = threadIdx.z+halo;
+		int i, j, k;
+		if( xx == 1 ) i = -1;
+		else if( xx == XX ) i = 1;
+		else i = 0;
+		
+		if( yy == 1 ) j = -1;
+		else if( yy == YY ) j = 1;
+		else j = 0;
+		
+		if( zz == 1 ) k = -1;
+		else if( zz == ZZ ) k = 1;
+		else k = 0;
+		
+		sub[ INDEX( xx, yy, zz, lenx, leny ) ] = in[ INDEX(x, y, z, ldx, ldy) ];
+		if( i != 0 ) 			sub[ INDEX( xx+i, yy, zz, lenx, leny ) ] = in[ INDEX(x+i, y, z, ldx, ldy) ];
+		if( j != 0 ) 			sub[ INDEX( xx, yy+j, zz, lenx, leny ) ] = in[ INDEX(x, y+j, z, ldx, ldy) ];
+		if( k != 0 )			sub[ INDEX( xx, yy, zz+k, lenx, leny ) ] = in[ INDEX(x, y, z+k, ldx, ldy) ];
+		if( i != 0 && j != 0 )		sub[ INDEX( xx+i, yy+j, zz, lenx, leny ) ] = in[ INDEX(x+i, y+j, z, ldx, ldy) ];	
+		if( j != 0 && k != 0 )		sub[ INDEX( xx, yy+j, zz+k, lenx, leny ) ] = in[ INDEX(x, y+j, z+k, ldx, ldy) ];
+		if( i != 0 && k != 0 )		sub[ INDEX( xx+i, yy, zz+k, lenx, leny ) ] = in[ INDEX(x+i, y, z+k, ldx, ldy) ];
+		if( i != 0 && j != 0 && k != 0 )	sub[ INDEX( xx+i, yy+j, zz+k, lenx, leny ) ] = in[ INDEX(x+i, y+j, z+k, ldx, ldy) ];
+		
+		__syncthreads(); 
+		
+        out[INDEX(x, y, z, ldx, ldy)] \
+            = ALPHA_ZZZ * sub[INDEX(xx, yy, zz, lenx, leny)] \
+            + ALPHA_NZZ * sub[INDEX(xx-1, yy, zz, lenx, leny)] \
+            + ALPHA_PZZ * sub[INDEX(xx+1, yy, zz, lenx, leny)] \
+            + ALPHA_ZNZ * sub[INDEX(xx, yy-1, zz, lenx, leny)] \
+            + ALPHA_ZPZ * sub[INDEX(xx, yy+1, zz, lenx, leny)] \
+            + ALPHA_ZZN * sub[INDEX(xx, yy, zz-1, lenx, leny)] \
+            + ALPHA_ZZP * sub[INDEX(xx, yy, zz+1, lenx, leny)] \
+            + ALPHA_NNZ * sub[INDEX(xx-1, yy-1, zz, lenx, leny)] \
+            + ALPHA_PNZ * sub[INDEX(xx+1, yy-1, zz, lenx, leny)] \
+            + ALPHA_NPZ * sub[INDEX(xx-1, yy+1, zz, lenx, leny)] \
+            + ALPHA_PPZ * sub[INDEX(xx+1, yy+1, zz, lenx, leny)] \
+            + ALPHA_NZN * sub[INDEX(xx-1, yy, zz-1, lenx, leny)] \
+            + ALPHA_PZN * sub[INDEX(xx+1, yy, zz-1, lenx, leny)] \
+            + ALPHA_NZP * sub[INDEX(xx-1, yy, zz+1, lenx, leny)] \
+            + ALPHA_PZP * sub[INDEX(xx+1, yy, zz+1, lenx, leny)] \
+            + ALPHA_ZNN * sub[INDEX(xx, yy-1, zz-1, lenx, leny)] \
+            + ALPHA_ZPN * sub[INDEX(xx, yy+1, zz-1, lenx, leny)] \
+            + ALPHA_ZNP * sub[INDEX(xx, yy-1, zz+1, lenx, leny)] \
+            + ALPHA_ZPP * sub[INDEX(xx, yy+1, zz+1, lenx, leny)] \
+            + ALPHA_NNN * sub[INDEX(xx-1, yy-1, zz-1, lenx, leny)] \
+            + ALPHA_PNN * sub[INDEX(xx+1, yy-1, zz-1, lenx, leny)] \
+            + ALPHA_NPN * sub[INDEX(xx-1, yy+1, zz-1, lenx, leny)] \
+            + ALPHA_PPN * sub[INDEX(xx+1, yy+1, zz-1, lenx, leny)] \
+            + ALPHA_NNP * sub[INDEX(xx-1, yy-1, zz+1, lenx, leny)] \
+            + ALPHA_PNP * sub[INDEX(xx+1, yy-1, zz+1, lenx, leny)] \
+            + ALPHA_NPP * sub[INDEX(xx-1, yy+1, zz+1, lenx, leny)] \
+            + ALPHA_PPP * sub[INDEX(xx+1, yy+1, zz+1, lenx, leny)];
+    }
+}
+
+
 ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt) {
-    return grid;
+    ptr_t buffer[2] = {grid, aux};
+    int nx = grid_info->global_size_x;
+    int ny = grid_info->global_size_y;
+    int nz = grid_info->global_size_z;
+    dim3 grid_size (ceiling(nx, XX), ceiling(ny, YY), ceiling(nz, ZZ));
+    dim3 block_size (XX, YY, ZZ);
+    for(int t = 0; t < nt; ++t) {
+        stencil_27_naive_kernel_1step<<<grid_size, block_size>>>(\
+            buffer[t % 2], buffer[(t + 1) % 2], nx, ny, nz, \
+                grid_info->halo_size_x, grid_info->halo_size_y, grid_info->halo_size_z);
+    }
+    return buffer[nt % 2];
 }
