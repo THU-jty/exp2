@@ -29,6 +29,9 @@ benchmark-optimized : check.o benchmark.o stencil-optimized.o
 benchmark-3D : check.o benchmark.o 3D.o
 	$(CC) -o $@ $^ $(LDLIBS)
 
+benchmark-timeskew : check.o benchmark.o 3D.o
+	$(CC) -o $@ $^ $(LDLIBS)
+
 %.o : %.c common.h
 	$(CC) -c $(CFLAGS) $< -o $@
 

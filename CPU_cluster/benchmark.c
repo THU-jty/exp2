@@ -82,11 +82,13 @@ int main(int argc, char **argv) {
             ans1 = (ans0 == a0) ? a1 : a0;
             ABORT_IF_ERROR(read_file(ans1, argv[7], &helper, active_procs))
             result = check_answer(ans0, ans1, &info, active_procs);
-            printf("errors:\n    1-norm = %.16lf\n    2-norm = %.16lf\n  inf-norm = %.16lf\n", \
-                    result.norm_1, result.norm_2, result.norm_inf);
-            if(result.norm_inf > 1e-12) {
-                printf("Significant numeric error.\n");
-            }
+            if(p_id == 0) { 
+				printf("errors:\n    1-norm = %.16lf\n    2-norm = %.16lf\n  inf-norm = %.16lf\n", \
+						result.norm_1, result.norm_2, result.norm_inf);
+				if(result.norm_inf > 1e-12) {
+					printf("Significant numeric error.\n");
+				}
+			}	
         } else if(p_id == 0) { 
             printf("Result unchecked.\n");
         }

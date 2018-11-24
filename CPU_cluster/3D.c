@@ -5,6 +5,7 @@
 #include "common.h"
 
 const char* version_name = "Optimized version";
+#define __para
 
 /* your implementation */
 void create_dist_grid(dist_grid_info_t *grid_info, int stencil_type) {
@@ -110,10 +111,6 @@ ptr_t buffer[2] = {grid, aux};
 	for(int t = 0; t < nt; ++t) {
         cptr_t a0 = buffer[t % 2];
         ptr_t a1 = buffer[(t + 1) % 2];
-#pragma omp parallel sections
-		{		
-			#pragma omp section
-			{
 				if( rkz != 0 && pz != 1 ){
 					MPI_Isend( a0+ldy*ldx, 1, xyplane, rk_z0, 0, MPI_COMM_WORLD, &req[0] );
 					MPI_Irecv( a0, 1, xyplane, rk_z0, 1, MPI_COMM_WORLD, &req[1] );
@@ -139,6 +136,12 @@ ptr_t buffer[2] = {grid, aux};
 					MPI_Irecv( a0+lx+1, 1, yzplane, rk_x1, 5, MPI_COMM_WORLD, &req[11] );
 				}
 				
+				#pragma omp parallel for schedule (dynamic)
+				for(int z = z_start+1; z < z_end-1; ++z) 
+					for(int y = y_start+1; y < y_end-1; ++y) 
+						for(int x = x_start+1; x < x_end-1; ++x) 
+							cal( a0, a1, x, y, z, ldx, ldy );
+						
 				if( rkz != 0 && pz != 1 ){
 					MPI_Waitall( 2, &req[0], &sta[0] );
 				}
@@ -157,50 +160,46 @@ ptr_t buffer[2] = {grid, aux};
 				if( rkx != px-1 && px != 1 ){
 					MPI_Waitall( 2, &req[10], &sta[10] );
 				}
-						//cal z
-				for( int z = z_start; z < z_start+1; ++z )
+				
+				//cal z
+				#pragma omp parallel for schedule (dynamic)
 					for(int y = y_start; y < y_end; ++y) 
 						for(int x = x_start; x < x_end; ++x) 
-							cal( a0, a1, x, y, z, ldx, ldy );	
-				for( int z = z_end-1; z < z_end; ++z )
+							cal( a0, a1, x, y, z_start, ldx, ldy );	
+				#pragma omp parallel for schedule (dynamic)
 					for(int y = y_start; y < y_end; ++y) 
 						for(int x = x_start; x < x_end; ++x) 
-							cal( a0, a1, x, y, z, ldx, ldy );		
+							cal( a0, a1, x, y, z_end-1, ldx, ldy );		
 
 				//cal y
+				#pragma omp parallel for schedule (dynamic)
 				for( int z = z_start; z < z_end; ++z )
 					for(int y = y_start; y < y_start+1; ++y) 
 						for(int x = x_start; x < x_end; ++x) 
-							cal( a0, a1, x, y, z, ldx, ldy );		
+							cal( a0, a1, x, y, z, ldx, ldy );	
+				#pragma omp parallel for schedule (dynamic)
 				for( int z = z_start; z < z_end; ++z )
 					for(int y = y_end-1; y < y_end; ++y) 
 						for(int x = x_start; x < x_end; ++x) 
 							cal( a0, a1, x, y, z, ldx, ldy );		
 				
 				//cal x
+				#pragma omp parallel for schedule (dynamic)
 				for( int z = z_start; z < z_end; ++z )
 					for(int y = y_start; y < y_end; ++y) 
 						for(int x = x_start; x < x_start+1; ++x) 
-							cal( a0, a1, x, y, z, ldx, ldy );		
+							cal( a0, a1, x, y, z, ldx, ldy );	
+				#pragma omp parallel for schedule (dynamic)
 				for( int z = z_start; z < z_end; ++z )
 					for(int y = y_start; y < y_end; ++y) 
 						for(int x = x_end-1; x < x_end; ++x) 
 							cal( a0, a1, x, y, z, ldx, ldy );	
-			}
-			#pragma omp section
-			{
-				for(int z = z_start+1; z < z_end-1; ++z) 
-					for(int y = y_start+1; y < y_end-1; ++y) 
-						for(int x = x_start+1; x < x_end-1; ++x) 
-							cal( a0, a1, x, y, z, ldx, ldy );
-			}
-		}
+
 	}
 	return buffer[nt % 2];
 }
 
 
-/* your implementation */
 ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt) {
 ptr_t buffer[2] = {grid, aux};
     int x_start = grid_info->halo_size_x, x_end = grid_info->local_size_x + grid_info->halo_size_x;
@@ -235,10 +234,7 @@ ptr_t buffer[2] = {grid, aux};
 	for(int t = 0; t < nt; ++t) {
         cptr_t a0 = buffer[t % 2];
         ptr_t a1 = buffer[(t + 1) % 2];
-#pragma omp parallel sections
-		{		
-			#pragma omp section
-			{
+
 				if( rkz != 0 && pz != 1 ){
 					MPI_Isend( a0+ldy*ldx, 1, xyplane, rk_z0, 0, MPI_COMM_WORLD, &req[0] );
 					MPI_Irecv( a0, 1, xyplane, rk_z0, 1, MPI_COMM_WORLD, &req[1] );
@@ -286,44 +282,12 @@ ptr_t buffer[2] = {grid, aux};
 				if( rkx != px-1 && px != 1 ){
 					MPI_Waitall( 2, &req[10], &sta[10] );
 				}
-						//cal z
-				for( int z = z_start; z < z_start+1; ++z )
-					for(int y = y_start; y < y_end; ++y) 
-						for(int x = x_start; x < x_end; ++x) 
-							cal27( a0, a1, x, y, z, ldx, ldy );	
-				for( int z = z_end-1; z < z_end; ++z )
-					for(int y = y_start; y < y_end; ++y) 
-						for(int x = x_start; x < x_end; ++x) 
-							cal27( a0, a1, x, y, z, ldx, ldy );		
 
-				//cal y
-				for( int z = z_start; z < z_end; ++z )
-					for(int y = y_start; y < y_start+1; ++y) 
-						for(int x = x_start; x < x_end; ++x) 
-							cal27( a0, a1, x, y, z, ldx, ldy );		
-				for( int z = z_start; z < z_end; ++z )
-					for(int y = y_end-1; y < y_end; ++y) 
-						for(int x = x_start; x < x_end; ++x) 
-							cal27( a0, a1, x, y, z, ldx, ldy );		
-				
-				//cal x
-				for( int z = z_start; z < z_end; ++z )
+				#pragma omp parallel for schedule (dynamic)
+				for(int z = z_start; z < z_end; ++z) 
 					for(int y = y_start; y < y_end; ++y) 
-						for(int x = x_start; x < x_start+1; ++x) 
-							cal27( a0, a1, x, y, z, ldx, ldy );		
-				for( int z = z_start; z < z_end; ++z )
-					for(int y = y_start; y < y_end; ++y) 
-						for(int x = x_end-1; x < x_end; ++x) 
-							cal27( a0, a1, x, y, z, ldx, ldy );	
-			}
-			#pragma omp section
-			{
-				for(int z = z_start+1; z < z_end-1; ++z) 
-					for(int y = y_start+1; y < y_end-1; ++y) 
-						for(int x = x_start+1; x < x_end-1; ++x) 
+						for(int x = x_start; x < x_end; ++x) 
 							cal27( a0, a1, x, y, z, ldx, ldy );
-			}
-		}
 	}
 	return buffer[nt % 2];
 }

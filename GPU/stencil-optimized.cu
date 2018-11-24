@@ -16,7 +16,7 @@ void destroy_dist_grid(dist_grid_info_t *grid_info) {
 
 }
 
-#define XX 64
+#define XX 32
 #define YY 4
 #define ZZ 4
 #define lenx (XX+halo*2)
@@ -24,7 +24,8 @@ void destroy_dist_grid(dist_grid_info_t *grid_info) {
 #define lenz (ZZ+halo*2)
 #define BLOCK_SIZE 9
 
-//#define __HALO
+#define __HALO
+//(32,4,4)
 
 __global__ void stencil_7_naive_kernel_1step(cptr_t in, ptr_t out, \
                                 int nx, int ny, int nz, \
