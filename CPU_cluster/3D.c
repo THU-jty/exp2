@@ -5,8 +5,9 @@
 #include <mpi.h>
 #include "common.h"
 
-const char* version_name = "Optimized version";
-#define __para
+const char* version_name = "3D";
+//#define __para
+#define __partition
 
 /* your implementation */
 void create_dist_grid(dist_grid_info_t *grid_info, int stencil_type) {
@@ -131,7 +132,7 @@ ptr_t buffer[2] = {grid, aux};
 	MPI_Type_vector(ldy*ldz,1,ldx,MPI_DOUBLE,&yzplane);
     MPI_Type_commit(&yzplane);
 	
-	omp_set_num_threads(24);
+	//omp_set_num_threads(24);
 	for(int t = 0; t < nt; ++t) {
         cptr_t a0 = buffer[t % 2];
         ptr_t a1 = buffer[(t + 1) % 2];
@@ -143,6 +144,14 @@ ptr_t buffer[2] = {grid, aux};
 					MPI_Isend( a0+ldy*ldx*lz, 1, xyplane, rk_z1, 1, MPI_COMM_WORLD, &req[2] );
 					MPI_Irecv( a0+ldy*ldx*(lz+1), 1, xyplane, rk_z1, 0, MPI_COMM_WORLD, &req[3] );
 				}
+#ifdef __partition				
+				if( rkz != 0 && pz != 1 ){
+					MPI_Waitall( 2, &req[0], &sta[0] );
+				}
+				if( rkz != pz-1 && pz != 1 ){
+					MPI_Waitall( 2, &req[2], &sta[2] );
+				}		
+#endif				
 				
 				if( rky != 0 && py != 1 ){
 					MPI_Isend( a0+ldx, 1, xzplane, rk_y0, 2, MPI_COMM_WORLD, &req[4] );
@@ -152,7 +161,14 @@ ptr_t buffer[2] = {grid, aux};
 					MPI_Isend( a0+ly*ldx, 1, xzplane, rk_y1, 3, MPI_COMM_WORLD, &req[6] );
 					MPI_Irecv( a0+(ly+1)*ldx, 1, xzplane, rk_y1, 2, MPI_COMM_WORLD, &req[7] );
 				}
-				
+#ifdef __partition					
+				if( rky != 0 && py != 1 ){
+					MPI_Waitall( 2, &req[4], &sta[4] );
+				}
+				if( rky != py-1 && py != 1 ){
+					MPI_Waitall( 2, &req[6], &sta[6] );
+				}
+#endif				
 				if( rkx != 0 && px != 1 ){
 					MPI_Isend( a0+1, 1, yzplane, rk_x0, 5, MPI_COMM_WORLD, &req[8] );
 					MPI_Irecv( a0, 1, yzplane, rk_x0, 6, MPI_COMM_WORLD, &req[9] );
@@ -161,25 +177,7 @@ ptr_t buffer[2] = {grid, aux};
 					MPI_Isend( a0+lx, 1, yzplane, rk_x1, 6, MPI_COMM_WORLD, &req[10] );
 					MPI_Irecv( a0+lx+1, 1, yzplane, rk_x1, 5, MPI_COMM_WORLD, &req[11] );
 				}
-				
-				#pragma omp parallel for schedule (dynamic)
-				for(int z = z_start; z < z_end; ++z){
-					if( z == z_start || z == z_end-1 ) continue;
-					for(int y = y_start; y < y_end; y += YY) {
-						int ys = min( YY, y_end-y );
-						for(int x = x_start; x < x_end; x += XX) {
-							int xs = min( XX, x_end-x );
-							for( int yy = y; yy < y+ys; yy ++ ){
-								if( yy == y_start || yy == y_end-1 ) continue;
-								for( int xx = x; xx < x+xs; xx ++ ){
-									if( xx == x_start || xx == x_end-1 ) continue;
-									cal( a0, a1, xx, yy, z, ldx, ldy );
-								}
-							}
-						}
-					}
-				}
-						
+#ifndef __partition				
 				if( rkz != 0 && pz != 1 ){
 					MPI_Waitall( 2, &req[0], &sta[0] );
 				}
@@ -192,6 +190,7 @@ ptr_t buffer[2] = {grid, aux};
 				if( rky != py-1 && py != 1 ){
 					MPI_Waitall( 2, &req[6], &sta[6] );
 				}
+#endif				
 				if( rkx != 0 && px != 1 ){
 					MPI_Waitall( 2, &req[8], &sta[8] );
 				}
@@ -199,6 +198,41 @@ ptr_t buffer[2] = {grid, aux};
 					MPI_Waitall( 2, &req[10], &sta[10] );
 				}
 				
+
+#ifdef __para				
+				for(int y = y_start; y < y_end; y += YY) {
+				#pragma omp parallel for schedule (dynamic)
+				for(int z = z_start; z < z_end; ++z){
+					if( z == z_start || z == z_end-1 ) continue;
+						for( int yy = y; yy < y+YY; yy ++ ){
+							if( yy == y_start || yy == y_end-1 ) continue;
+							for( int xx = x_start; xx < x_end; xx ++ ){
+								if( xx == x_start || xx == x_end-1 ) continue;
+								cal( a0, a1, xx, yy, z, ldx, ldy );
+							}
+						}
+					}
+				}
+#endif						
+				// if( rkz != 0 && pz != 1 ){
+					// MPI_Waitall( 2, &req[0], &sta[0] );
+				// }
+				// if( rkz != pz-1 && pz != 1 ){
+					// MPI_Waitall( 2, &req[2], &sta[2] );
+				// }
+				// if( rky != 0 && py != 1 ){
+					// MPI_Waitall( 2, &req[4], &sta[4] );
+				// }
+				// if( rky != py-1 && py != 1 ){
+					// MPI_Waitall( 2, &req[6], &sta[6] );
+				// }
+				// if( rkx != 0 && px != 1 ){
+					// MPI_Waitall( 2, &req[8], &sta[8] );
+				// }
+				// if( rkx != px-1 && px != 1 ){
+					// MPI_Waitall( 2, &req[10], &sta[10] );
+				// }
+#ifdef __para				
 				//cal z
 				#pragma omp parallel for schedule (dynamic)
 					for(int y = y_start; y < y_end; ++y) 
@@ -232,11 +266,25 @@ ptr_t buffer[2] = {grid, aux};
 					for(int y = y_start; y < y_end; ++y) 
 						for(int x = x_end-1; x < x_end; ++x) 
 							cal( a0, a1, x, y, z, ldx, ldy );	
-
+						
+#else						
+				for(int y = y_start; y < y_end; y += YY) {
+				#pragma omp parallel for schedule (dynamic)
+				for(int z = z_start; z < z_end; ++z){
+					//if( z == z_start || z == z_end-1 ) continue;
+						for( int yy = y; yy < y+YY; yy ++ ){
+							//if( yy == y_start || yy == y_end-1 ) continue;
+							for( int xx = x_start; xx < x_end; xx ++ ){
+								//if( xx == x_start || xx == x_end-1 ) continue;
+								cal( a0, a1, xx, yy, z, ldx, ldy );
+							}
+						}
+					}
+				}
+#endif
 	}
 	return buffer[nt % 2];
 }
-
 
 ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt) {
 ptr_t buffer[2] = {grid, aux};
@@ -258,7 +306,7 @@ ptr_t buffer[2] = {grid, aux};
 	int XX = lx, ZZ = 1;
 	int YY = 4096/XX; 
 	if( lx == 384 ) YY = 12;
-	if( lx == 192 ) YY = 24;
+
 	//printf("rank %d pnum %d\n", rank, pnum);
 	MPI_Status  sta[16];
     MPI_Request req[16];
@@ -269,10 +317,12 @@ ptr_t buffer[2] = {grid, aux};
 	MPI_Type_vector(ldz,ldx,ldx*ldy,MPI_DOUBLE,&xzplane);
     MPI_Type_commit(&xzplane);
 	
+	
+	
 	MPI_Type_vector(ldy*ldz,1,ldx,MPI_DOUBLE,&yzplane);
     MPI_Type_commit(&yzplane);
 	
-	omp_set_num_threads(24);
+	//omp_set_num_threads(24);
 	for(int t = 0; t < nt; ++t) {
         cptr_t a0 = buffer[t % 2];
         ptr_t a1 = buffer[(t + 1) % 2];
@@ -325,11 +375,19 @@ ptr_t buffer[2] = {grid, aux};
 					MPI_Waitall( 2, &req[10], &sta[10] );
 				}
 
+				for(int y = y_start; y < y_end; y += YY) {
 				#pragma omp parallel for schedule (dynamic)
-				for(int z = z_start; z < z_end; ++z) 
-					for(int y = y_start; y < y_end; ++y) 
-						for(int x = x_start; x < x_end; ++x) 
-							cal27( a0, a1, x, y, z, ldx, ldy );
+				for(int z = z_start; z < z_end; ++z){
+					//if( z == z_start || z == z_end-1 ) continue;
+						for( int yy = y; yy < y+YY; yy ++ ){
+							//if( yy == y_start || yy == y_end-1 ) continue;
+							for( int xx = x_start; xx < x_end; xx ++ ){
+								//if( xx == x_start || xx == x_end-1 ) continue;
+								cal( a0, a1, xx, yy, z, ldx, ldy );
+							}
+						}
+					}
+				}
 	}
 	return buffer[nt % 2];
 }

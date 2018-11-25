@@ -19,12 +19,13 @@ void destroy_dist_grid(dist_grid_info_t *grid_info) {
 #define XX 32
 #define YY 4
 #define ZZ 4
+//#define lenx (XX+16*2)
 #define lenx (XX+halo*2)
 #define leny (YY+halo*2)
 #define lenz (ZZ+halo*2)
 #define BLOCK_SIZE 9
 
-//#define __HALO
+#define __HALO
 //(32,4,4)
 
 __global__ void stencil_7_naive_kernel_1step(cptr_t in, ptr_t out, \
@@ -43,11 +44,15 @@ __global__ void stencil_7_naive_kernel_1step(cptr_t in, ptr_t out, \
 #ifdef __HALO		
 		__shared__ double sub[lenx*leny*lenz];
 		
+		//int xx = threadIdx.x+16;
 		int xx = threadIdx.x+halo;
 		int yy = threadIdx.y+halo;
 		int zz = threadIdx.z+halo;
 		
 		sub[ INDEX( xx, yy, zz, lenx, leny ) ] = in[ INDEX(x, y, z, ldx, ldy) ];
+		// if( xx == 16 ) 	sub[ INDEX( xx-1, yy, zz, lenx, leny ) ] = in[ INDEX(x-1, y, z, ldx, ldy) ];
+		// if( xx == XX+15 ) 	sub[ INDEX( xx+1, yy, zz, lenx, leny ) ] = in[ INDEX(x+1, y, z, ldx, ldy) ];
+		
 		if( xx == 1 ) 	sub[ INDEX( xx-1, yy, zz, lenx, leny ) ] = in[ INDEX(x-1, y, z, ldx, ldy) ];
 		if( xx == XX ) 	sub[ INDEX( xx+1, yy, zz, lenx, leny ) ] = in[ INDEX(x+1, y, z, ldx, ldy) ];
 		if( yy == 1 )	sub[ INDEX( xx, yy-1, zz, lenx, leny ) ] = in[ INDEX(x, y-1, z, ldx, ldy) ];

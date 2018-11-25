@@ -4,7 +4,7 @@
 #include <mpi.h>
 #include "common.h"
 
-const char* version_name = "Optimized version";
+const char* version_name = "mpi";
 
 /* your implementation */
 void create_dist_grid(dist_grid_info_t *grid_info, int stencil_type) {
@@ -52,12 +52,12 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
     MPI_Type_vector(ly,lx,ldx,MPI_DOUBLE,&plane);
     MPI_Type_commit(&plane);	
 		
-	int XX = lx, ZZ = 1;
-	int YY = 4; 
+	int XX = lx, ZZ = lz;
+	int YY = 16; 
 	if( lx == 384 ) YY = 12;
-	if( lx == 192 ) YY = 24;
+	if( lx == 512 ) YY = 8;
 	
-	omp_set_num_threads(24);
+	//omp_set_num_threads(24);
 	for(int t = 0; t < nt; ++t) {
         cptr_t a0 = buffer[t % 2];
         ptr_t a1 = buffer[(t + 1) % 2];
@@ -65,29 +65,34 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 		 if( rank == pnum-1 ){
 			MPI_Isend( a0+ldy*ldx+ldx+1, 1, plane, rank-1, 0, MPI_COMM_WORLD, &req[0] );
 			MPI_Irecv( a0+ldx+1, 1, plane, rank-1, 1, MPI_COMM_WORLD, &req[1] );
-			MPI_Waitall( 2, req, sta );
+			MPI_Wait( &req[0], &sta[0] );
+			MPI_Wait( &req[1], &sta[1] );
 		}
 		else if( rank == 0 ){
 			MPI_Isend( a0+ldy*ldx*lz+ldx+1, 1, plane, rank+1, 1, MPI_COMM_WORLD, &req[2] );
 			MPI_Irecv( a0+ldy*ldx*(lz+1)+ldx+1, 1, plane, rank+1, 0, MPI_COMM_WORLD, &req[3] );
-			MPI_Waitall( 2, &req[2], &sta[2] );
+			MPI_Wait( &req[2], &sta[2] );
+			MPI_Wait( &req[3], &sta[3] );
 		}
-		else{
+		else{	
+			
 			MPI_Isend( a0+ldy*ldx+ldx+1, 1, plane, rank-1, 0, MPI_COMM_WORLD, &req[0] );
 			MPI_Irecv( a0+ldx+1, 1, plane, rank-1, 1, MPI_COMM_WORLD, &req[1] );
+			MPI_Wait( &req[0], &sta[0] );
+			MPI_Wait( &req[1], &sta[1] );
 			
 			MPI_Isend( a0+ldy*ldx*lz+ldx+1, 1, plane, rank+1, 1, MPI_COMM_WORLD, &req[2] );
 			MPI_Irecv( a0+ldy*ldx*(lz+1)+ldx+1, 1, plane, rank+1, 0, MPI_COMM_WORLD, &req[3] );
-			MPI_Waitall( 4, req, sta );
+			MPI_Wait( &req[2], &sta[2] );
+			MPI_Wait( &req[3], &sta[3] );
 		}
-#pragma omp parallel for schedule (dynamic)
+//#pragma omp parallel for schedule (dynamic)
         for(int zz = z_start; zz < z_end; zz += ZZ) {
-	//		#pragma omp parallel for schedule (dynamic)
 			for( int yy = y_start; yy < y_end; yy += YY ){
-				for( int xx = x_start; xx < x_end; xx += XX ){
+					#pragma omp parallel for schedule (dynamic)
 					for(int z = zz; z < zz+ZZ; ++z)
 					for(int y = yy; y < yy+YY; ++y) {
-						for(int x = xx; x < xx+XX; ++x) {
+						for(int x = x_start; x < x_end; ++x) {
 							a1[INDEX(x, y, z, ldx, ldy)] \
 								= ALPHA_ZZZ * a0[INDEX(x, y, z, ldx, ldy)] \
 								+ ALPHA_NZZ * a0[INDEX(x-1, y, z, ldx, ldy)] \
@@ -98,7 +103,6 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 								+ ALPHA_ZZP * a0[INDEX(x, y, z+1, ldx, ldy)];
 						}
 					}
-				}
 			}
         }
 	}
@@ -126,11 +130,11 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
     MPI_Type_vector(ly,lx,ldx,MPI_DOUBLE,&plane);
     MPI_Type_commit(&plane);
 	
-	int XX = lx, ZZ = 1;
+	int XX = lx, ZZ = lz;
 	int YY = 4096/XX; 
 	if( lx == 384 ) YY = 12;
 	if( lx == 192 ) YY = 24;
-	omp_set_num_threads(24);
+	//omp_set_num_threads(24);
 	for(int t = 0; t < nt; ++t) {
         cptr_t a0 = buffer[t % 2];
         ptr_t a1 = buffer[(t + 1) % 2];
@@ -154,10 +158,10 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
 			MPI_Waitall( 4, req, sta );
 		}
 
-#pragma omp parallel for
         for(int zz = z_start; zz < z_end; zz += ZZ) {
 			for( int yy = y_start; yy < y_end; yy += YY ){
 				for( int xx = x_start; xx < x_end; xx += XX ){
+					#pragma omp parallel for schedule (dynamic)
 					for(int z = zz; z < zz+ZZ; ++z)
 					for(int y = yy; y < yy+YY; ++y) {
 						for(int x = xx; x < xx+XX; ++x) {

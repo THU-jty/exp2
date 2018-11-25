@@ -3,7 +3,7 @@
 #define min(a,b) (((a)<(b))?(a):(b))
 #define max(a,b) (((a)>(b))?(a):(b))
 
-const char* version_name = "A naive base-line";
+const char* version_name = "time skewing";
 
 void create_dist_grid(dist_grid_info_t *grid_info, int stencil_type) {
     /* Naive implementation uses Process 0 to do all computations */
@@ -41,14 +41,14 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 	int lz = grid_info->local_size_z;
 	
 	int XX = lx/2, ZZ = lz, YY; 
-	if( ly == 256 ) YY = 8;
+	if( ly == 256 ) YY = 16;
 	if( ly == 384 ) YY = 12;
 	if( ly == 512 ) YY = 8;
 	
 	int neg_x_slope, pos_x_slope, neg_y_slope, pos_y_slope, neg_z_slope, pos_z_slope;
 	int blockMin_x, blockMin_y, blockMin_z;
 	int blockMax_x, blockMax_y, blockMax_z;
-	omp_set_num_threads(24);
+	//omp_set_num_threads(24);
     for(int zz = z_start; zz < z_end; zz += ZZ) {
 		neg_z_slope = 1;
 		pos_z_slope = -1;

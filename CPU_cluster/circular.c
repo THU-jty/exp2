@@ -6,7 +6,7 @@
 #define min(a,b) (((a)<(b))?(a):(b))
 #define max(a,b) (((a)>(b))?(a):(b))
 
-const char* version_name = "A naive base-line";
+const char* version_name = "circular queue";
 
 void create_dist_grid(dist_grid_info_t *grid_info, int stencil_type) {
     /* Naive implementation uses Process 0 to do all computations */
@@ -53,7 +53,7 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 	double *a;
 	double* p[30][20][3];
 	int numy = ly/y_sp;
-	int num_t = 24;
+	int num_t = omp_get_num_threads();
 	a = ( double * )malloc( sizeof(double)*(t_sp-1)*llx*(y_sp+2*cir)*3*num_t );
 	for( int k = 0; k < num_t; k ++ )
         for( int i = 0; i < t_sp-1; i ++ ){
@@ -62,7 +62,7 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
             }
         }
 	int nw = 0;
-	omp_set_num_threads(num_t);
+	//omp_set_num_threads(num_t);
 	for( int tt = 0; tt < nt; tt += t_sp ){	
 		ptr_t a0 = buffer[nw];
         ptr_t a1 = buffer[nw^1];
@@ -201,7 +201,7 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
 	double *a;
 	double* p[30][20][3];
 	int numy = ly/y_sp;
-	int num_t = 24;
+	int num_t = omp_get_num_threads();
 	a = ( double * )malloc( sizeof(double)*(t_sp-1)*llx*(y_sp+2*cir)*3*num_t );
 	for( int k = 0; k < num_t; k ++ )
         for( int i = 0; i < t_sp-1; i ++ ){
@@ -210,7 +210,7 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
             }
         }
 	int nw = 0;
-	omp_set_num_threads(num_t);
+	//omp_set_num_threads(num_t);
 	for( int tt = 0; tt < nt; tt += t_sp ){	
 		ptr_t a0 = buffer[nw];
         ptr_t a1 = buffer[nw^1];
