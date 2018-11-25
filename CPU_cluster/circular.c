@@ -44,7 +44,10 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 	int lz = grid_info->local_size_z;
 
 	int cir = grid_info->halo_size_x;
-	int t_sp = cir, y_sp = 8, z_sp = lz, x_sp = 128;
+	int t_sp = cir, y_sp, z_sp = lz, x_sp = 128;
+	if( ly == 256 ) y_sp = 16;
+	if( ly == 384 ) y_sp = 12;
+	if( ly == 512 ) y_sp = 8;
 
 	int llx = x_sp+2*cir;
 	double *a;

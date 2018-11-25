@@ -24,7 +24,7 @@ void destroy_dist_grid(dist_grid_info_t *grid_info) {
 #define lenz (ZZ+halo*2)
 #define BLOCK_SIZE 9
 
-#define __HALO
+//#define __HALO
 //(32,4,4)
 
 __global__ void stencil_7_naive_kernel_1step(cptr_t in, ptr_t out, \
@@ -88,57 +88,6 @@ __global__ void stencil_7_naive_kernel_1step(cptr_t in, ptr_t out, \
 #endif
     }
 }
-
-/*
-    int tx = blockIdx.x + gridDim.x * threadIdx.x;
-    int ty = blockIdx.y + gridDim.y * threadIdx.y;
-    int tz = blockIdx.z + gridDim.z * threadIdx.z;
-	
-	
-	            + ALPHA_NZZ * sub[ INDEX( xx-1, yy, zz, len, len ) ] \
-            + ALPHA_PZZ * sub[ INDEX( xx+1, yy, zz, len, len ) ] \
-            + ALPHA_ZNZ * sub[ INDEX( xx, yy-1, zz, len, len ) ] \
-            + ALPHA_ZPZ * sub[ INDEX( xx, yy+1, zz, len, len ) ] \
-            + ALPHA_ZZN * sub[ INDEX( xx, yy, zz-1, len, len ) ] \
-            + ALPHA_ZZP * sub[ INDEX( xx, yy, zz+1, len, len ) ];
-	
-	
-	            + ALPHA_NZZ * in[INDEX(x-1, y, z, ldx, ldy)] \
-            + ALPHA_PZZ * in[INDEX(x+1, y, z, ldx, ldy)] \
-            + ALPHA_ZNZ * in[INDEX(x, y-1, z, ldx, ldy)] \
-            + ALPHA_ZPZ * in[INDEX(x, y+1, z, ldx, ldy)] \
-            + ALPHA_ZZN * in[INDEX(x, y, z-1, ldx, ldy)] \
-            + ALPHA_ZZP * in[INDEX(x, y, z+1, ldx, ldy)] \
-			
-        out[INDEX(x, y, z, ldx, ldy)] \
-            = ALPHA_ZZZ * in[INDEX(x, y, z, ldx, ldy)] \
-            + ALPHA_NZZ * in[INDEX(x-1, y, z, ldx, ldy)] \
-            + ALPHA_PZZ * in[INDEX(x+1, y, z, ldx, ldy)] \
-            + ALPHA_ZNZ * in[INDEX(x, y-1, z, ldx, ldy)] \
-            + ALPHA_ZPZ * in[INDEX(x, y+1, z, ldx, ldy)] \
-            + ALPHA_ZZN * in[INDEX(x, y, z-1, ldx, ldy)] \
-            + ALPHA_ZZP * in[INDEX(x, y, z+1, ldx, ldy)] \
-            + ALPHA_NNZ * in[INDEX(x-1, y-1, z, ldx, ldy)] \
-            + ALPHA_PNZ * in[INDEX(x+1, y-1, z, ldx, ldy)] \
-            + ALPHA_NPZ * in[INDEX(x-1, y+1, z, ldx, ldy)] \
-            + ALPHA_PPZ * in[INDEX(x+1, y+1, z, ldx, ldy)] \
-            + ALPHA_NZN * in[INDEX(x-1, y, z-1, ldx, ldy)] \
-            + ALPHA_PZN * in[INDEX(x+1, y, z-1, ldx, ldy)] \
-            + ALPHA_NZP * in[INDEX(x-1, y, z+1, ldx, ldy)] \
-            + ALPHA_PZP * in[INDEX(x+1, y, z+1, ldx, ldy)] \
-            + ALPHA_ZNN * in[INDEX(x, y-1, z-1, ldx, ldy)] \
-            + ALPHA_ZPN * in[INDEX(x, y+1, z-1, ldx, ldy)] \
-            + ALPHA_ZNP * in[INDEX(x, y-1, z+1, ldx, ldy)] \
-            + ALPHA_ZPP * in[INDEX(x, y+1, z+1, ldx, ldy)] \
-            + ALPHA_NNN * in[INDEX(x-1, y-1, z-1, ldx, ldy)] \
-            + ALPHA_PNN * in[INDEX(x+1, y-1, z-1, ldx, ldy)] \
-            + ALPHA_NPN * in[INDEX(x-1, y+1, z-1, ldx, ldy)] \
-            + ALPHA_PPN * in[INDEX(x+1, y+1, z-1, ldx, ldy)] \
-            + ALPHA_NNP * in[INDEX(x-1, y-1, z+1, ldx, ldy)] \
-            + ALPHA_PNP * in[INDEX(x+1, y-1, z+1, ldx, ldy)] \
-            + ALPHA_NPP * in[INDEX(x-1, y+1, z+1, ldx, ldy)] \
-            + ALPHA_PPP * in[INDEX(x+1, y+1, z+1, ldx, ldy)];
-*/
 
 inline int ceiling(int num, int den) {
     return (num - 1) / den + 1;

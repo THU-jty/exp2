@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#define min(a,b) (((a)<(b))?(a):(b))
 
 #include <mpi.h>
 #include "common.h"
@@ -76,6 +77,23 @@ inline void cal27( cptr_t a0, ptr_t a1, int x, int y, int z, int ldx, int ldy )
         + ALPHA_PPP * a0[INDEX(x+1, y+1, z+1, ldx, ldy)];
 }
 
+/*
+				#pragma omp parallel for schedule (dynamic)
+				for(int z = z_start+1; z < z_end-1; ++z){
+					for(int y = y_start+1; y < y_end-1; y += YY) {
+						int ys = min( YY, y_end-1-y );
+						for(int x = x_start+1; x < x_end-1; x += XX) {
+							int xs = min( XX, x_end-1-x );
+							for( int yy = y; yy < ys; yy ++ ){
+								for( int xx = x; xx < xs; xx ++ ){
+									cal( a0, a1, xx, yy, z, ldx, ldy );
+								}
+							}
+						}
+					}
+				}
+*/
+
 /* your implementation */
 ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt) {
 ptr_t buffer[2] = {grid, aux};
@@ -94,6 +112,12 @@ ptr_t buffer[2] = {grid, aux};
 	int rkx = rank%n, rky = (rank/n)%n, rkz = (rank/n/n)%n;
 	int px = n, py = n, pz = n;
 	
+	int XX = lx, ZZ = 1;
+	int YY = 4096/XX; 
+	if( lx == 384 ) YY = 12;
+	if( lx == 192 ) YY = 24;
+	
+	//printf("%d %d %d %d\n", rank, lx, ly, lz);
 	//printf("rank %d pnum %d\n", rank, pnum);
 	MPI_Status  sta[16];
     MPI_Request req[16];
@@ -119,6 +143,7 @@ ptr_t buffer[2] = {grid, aux};
 					MPI_Isend( a0+ldy*ldx*lz, 1, xyplane, rk_z1, 1, MPI_COMM_WORLD, &req[2] );
 					MPI_Irecv( a0+ldy*ldx*(lz+1), 1, xyplane, rk_z1, 0, MPI_COMM_WORLD, &req[3] );
 				}
+				
 				if( rky != 0 && py != 1 ){
 					MPI_Isend( a0+ldx, 1, xzplane, rk_y0, 2, MPI_COMM_WORLD, &req[4] );
 					MPI_Irecv( a0, 1, xzplane, rk_y0, 3, MPI_COMM_WORLD, &req[5] );
@@ -127,6 +152,7 @@ ptr_t buffer[2] = {grid, aux};
 					MPI_Isend( a0+ly*ldx, 1, xzplane, rk_y1, 3, MPI_COMM_WORLD, &req[6] );
 					MPI_Irecv( a0+(ly+1)*ldx, 1, xzplane, rk_y1, 2, MPI_COMM_WORLD, &req[7] );
 				}
+				
 				if( rkx != 0 && px != 1 ){
 					MPI_Isend( a0+1, 1, yzplane, rk_x0, 5, MPI_COMM_WORLD, &req[8] );
 					MPI_Irecv( a0, 1, yzplane, rk_x0, 6, MPI_COMM_WORLD, &req[9] );
@@ -137,10 +163,22 @@ ptr_t buffer[2] = {grid, aux};
 				}
 				
 				#pragma omp parallel for schedule (dynamic)
-				for(int z = z_start+1; z < z_end-1; ++z) 
-					for(int y = y_start+1; y < y_end-1; ++y) 
-						for(int x = x_start+1; x < x_end-1; ++x) 
-							cal( a0, a1, x, y, z, ldx, ldy );
+				for(int z = z_start; z < z_end; ++z){
+					if( z == z_start || z == z_end-1 ) continue;
+					for(int y = y_start; y < y_end; y += YY) {
+						int ys = min( YY, y_end-y );
+						for(int x = x_start; x < x_end; x += XX) {
+							int xs = min( XX, x_end-x );
+							for( int yy = y; yy < y+ys; yy ++ ){
+								if( yy == y_start || yy == y_end-1 ) continue;
+								for( int xx = x; xx < x+xs; xx ++ ){
+									if( xx == x_start || xx == x_end-1 ) continue;
+									cal( a0, a1, xx, yy, z, ldx, ldy );
+								}
+							}
+						}
+					}
+				}
 						
 				if( rkz != 0 && pz != 1 ){
 					MPI_Waitall( 2, &req[0], &sta[0] );
@@ -217,6 +255,10 @@ ptr_t buffer[2] = {grid, aux};
 	int rkx = rank%n, rky = (rank/n)%n, rkz = (rank/n/n)%n;
 	int px = n, py = n, pz = n;
 	
+	int XX = lx, ZZ = 1;
+	int YY = 4096/XX; 
+	if( lx == 384 ) YY = 12;
+	if( lx == 192 ) YY = 24;
 	//printf("rank %d pnum %d\n", rank, pnum);
 	MPI_Status  sta[16];
     MPI_Request req[16];

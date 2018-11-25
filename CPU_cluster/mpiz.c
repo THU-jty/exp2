@@ -50,7 +50,12 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
     MPI_Request req[4];
 	MPI_Datatype plane;
     MPI_Type_vector(ly,lx,ldx,MPI_DOUBLE,&plane);
-    MPI_Type_commit(&plane);
+    MPI_Type_commit(&plane);	
+		
+	int XX = lx, ZZ = 1;
+	int YY = 4; 
+	if( lx == 384 ) YY = 12;
+	if( lx == 192 ) YY = 24;
 	
 	omp_set_num_threads(24);
 	for(int t = 0; t < nt; ++t) {
@@ -76,17 +81,23 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 			MPI_Waitall( 4, req, sta );
 		}
 #pragma omp parallel for schedule (dynamic)
-		for(int z = z_start; z < z_end; ++z) {
-			for(int y = y_start; y < y_end; ++y) {
-				for(int x = x_start; x < x_end; ++x) {
-					a1[INDEX(x, y, z, ldx, ldy)] \
-						= ALPHA_ZZZ * a0[INDEX(x, y, z, ldx, ldy)] \
-						+ ALPHA_NZZ * a0[INDEX(x-1, y, z, ldx, ldy)] \
-						+ ALPHA_PZZ * a0[INDEX(x+1, y, z, ldx, ldy)] \
-						+ ALPHA_ZNZ * a0[INDEX(x, y-1, z, ldx, ldy)] \
-						+ ALPHA_ZPZ * a0[INDEX(x, y+1, z, ldx, ldy)] \
-						+ ALPHA_ZZN * a0[INDEX(x, y, z-1, ldx, ldy)] \
-						+ ALPHA_ZZP * a0[INDEX(x, y, z+1, ldx, ldy)];
+        for(int zz = z_start; zz < z_end; zz += ZZ) {
+	//		#pragma omp parallel for schedule (dynamic)
+			for( int yy = y_start; yy < y_end; yy += YY ){
+				for( int xx = x_start; xx < x_end; xx += XX ){
+					for(int z = zz; z < zz+ZZ; ++z)
+					for(int y = yy; y < yy+YY; ++y) {
+						for(int x = xx; x < xx+XX; ++x) {
+							a1[INDEX(x, y, z, ldx, ldy)] \
+								= ALPHA_ZZZ * a0[INDEX(x, y, z, ldx, ldy)] \
+								+ ALPHA_NZZ * a0[INDEX(x-1, y, z, ldx, ldy)] \
+								+ ALPHA_PZZ * a0[INDEX(x+1, y, z, ldx, ldy)] \
+								+ ALPHA_ZNZ * a0[INDEX(x, y-1, z, ldx, ldy)] \
+								+ ALPHA_ZPZ * a0[INDEX(x, y+1, z, ldx, ldy)] \
+								+ ALPHA_ZZN * a0[INDEX(x, y, z-1, ldx, ldy)] \
+								+ ALPHA_ZZP * a0[INDEX(x, y, z+1, ldx, ldy)];
+						}
+					}
 				}
 			}
         }
@@ -115,6 +126,10 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
     MPI_Type_vector(ly,lx,ldx,MPI_DOUBLE,&plane);
     MPI_Type_commit(&plane);
 	
+	int XX = lx, ZZ = 1;
+	int YY = 4096/XX; 
+	if( lx == 384 ) YY = 12;
+	if( lx == 192 ) YY = 24;
 	omp_set_num_threads(24);
 	for(int t = 0; t < nt; ++t) {
         cptr_t a0 = buffer[t % 2];
@@ -138,10 +153,14 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
 			MPI_Irecv( a0+ldy*ldx*(lz+1)+ldx+1, 1, plane, rank+1, 0, MPI_COMM_WORLD, &req[3] );
 			MPI_Waitall( 4, req, sta );
 		}
-#pragma omp parallel for schedule (dynamic)
-		for(int z = z_start; z < z_end; ++z) {
-			for(int y = y_start; y < y_end; ++y) {
-				for(int x = x_start; x < x_end; ++x) {
+
+#pragma omp parallel for
+        for(int zz = z_start; zz < z_end; zz += ZZ) {
+			for( int yy = y_start; yy < y_end; yy += YY ){
+				for( int xx = x_start; xx < x_end; xx += XX ){
+					for(int z = zz; z < zz+ZZ; ++z)
+					for(int y = yy; y < yy+YY; ++y) {
+						for(int x = xx; x < xx+XX; ++x) {
                     a1[INDEX(x, y, z, ldx, ldy)] \
                         = ALPHA_ZZZ * a0[INDEX(x, y, z, ldx, ldy)] \
                         + ALPHA_NZZ * a0[INDEX(x-1, y, z, ldx, ldy)] \
@@ -170,6 +189,8 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
                         + ALPHA_PNP * a0[INDEX(x+1, y-1, z+1, ldx, ldy)] \
                         + ALPHA_NPP * a0[INDEX(x-1, y+1, z+1, ldx, ldy)] \
                         + ALPHA_PPP * a0[INDEX(x+1, y+1, z+1, ldx, ldy)];
+						}
+					}
 				}
 			}
         }
