@@ -2,7 +2,7 @@
 #include <omp.h>
 #define min(a,b) (((a)<(b))?(a):(b))
 
-const char* version_name = "A naive packing";
+const char* version_name = "A naive pack";
 
 void create_dist_grid(dist_grid_info_t *grid_info, int stencil_type) {
     /* Naive implementation uses Process 0 to do all computations */
@@ -44,7 +44,7 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
     for(int t = 0; t < nt; ++t) {
         cptr_t a0 = buffer[t % 2];
         ptr_t a1 = buffer[(t + 1) % 2];
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
         for(int zz = z_start; zz < z_end; zz += ZZ) {
 			for( int yy = y_start; yy < y_end; yy += YY ){
 				for( int xx = x_start; xx < x_end; xx += XX ){
@@ -106,7 +106,7 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
     for(int t = 0; t < nt; ++t) {
         cptr_t a0 = buffer[t % 2];
         ptr_t a1 = buffer[(t + 1) % 2];
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
         for(int zz = z_start; zz < z_end; zz += ZZ) {
 			for( int yy = y_start; yy < y_end; yy += YY ){
 				for( int xx = x_start; xx < x_end; xx += XX ){

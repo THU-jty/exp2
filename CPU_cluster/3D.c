@@ -137,12 +137,12 @@ ptr_t buffer[2] = {grid, aux};
         cptr_t a0 = buffer[t % 2];
         ptr_t a1 = buffer[(t + 1) % 2];
 				if( rkz != 0 && pz != 1 ){
-					MPI_Isend( a0+ldy*ldx, 1, xyplane, rk_z0, 0, MPI_COMM_WORLD, &req[0] );
-					MPI_Irecv( a0, 1, xyplane, rk_z0, 1, MPI_COMM_WORLD, &req[1] );
+					MPI_Isend(  a0+ldy*ldx, 1, xyplane, rk_z0, 0, MPI_COMM_WORLD, &req[0] );
+					MPI_Irecv(  a0, 1, xyplane, rk_z0, 1, MPI_COMM_WORLD, &req[1] );
 				}
 				if( rkz != pz-1 && pz != 1 ){
-					MPI_Isend( a0+ldy*ldx*lz, 1, xyplane, rk_z1, 1, MPI_COMM_WORLD, &req[2] );
-					MPI_Irecv( a0+ldy*ldx*(lz+1), 1, xyplane, rk_z1, 0, MPI_COMM_WORLD, &req[3] );
+					MPI_Isend(  a0+ldy*ldx*lz, 1, xyplane, rk_z1, 1, MPI_COMM_WORLD, &req[2] );
+					MPI_Irecv(  a0+ldy*ldx*(lz+1), 1, xyplane, rk_z1, 0, MPI_COMM_WORLD, &req[3] );
 				}
 #ifdef __partition				
 				if( rkz != 0 && pz != 1 ){
@@ -154,12 +154,12 @@ ptr_t buffer[2] = {grid, aux};
 #endif				
 				
 				if( rky != 0 && py != 1 ){
-					MPI_Isend( a0+ldx, 1, xzplane, rk_y0, 2, MPI_COMM_WORLD, &req[4] );
-					MPI_Irecv( a0, 1, xzplane, rk_y0, 3, MPI_COMM_WORLD, &req[5] );
+					MPI_Isend(  a0+ldx, 1, xzplane, rk_y0, 2, MPI_COMM_WORLD, &req[4] );
+					MPI_Irecv(  a0, 1, xzplane, rk_y0, 3, MPI_COMM_WORLD, &req[5] );
 				}
 				if( rky != py-1 && py != 1 ){
-					MPI_Isend( a0+ly*ldx, 1, xzplane, rk_y1, 3, MPI_COMM_WORLD, &req[6] );
-					MPI_Irecv( a0+(ly+1)*ldx, 1, xzplane, rk_y1, 2, MPI_COMM_WORLD, &req[7] );
+					MPI_Isend(  a0+ly*ldx, 1, xzplane, rk_y1, 3, MPI_COMM_WORLD, &req[6] );
+					MPI_Irecv(  a0+(ly+1)*ldx, 1, xzplane, rk_y1, 2, MPI_COMM_WORLD, &req[7] );
 				}
 #ifdef __partition					
 				if( rky != 0 && py != 1 ){
@@ -170,12 +170,12 @@ ptr_t buffer[2] = {grid, aux};
 				}
 #endif				
 				if( rkx != 0 && px != 1 ){
-					MPI_Isend( a0+1, 1, yzplane, rk_x0, 5, MPI_COMM_WORLD, &req[8] );
-					MPI_Irecv( a0, 1, yzplane, rk_x0, 6, MPI_COMM_WORLD, &req[9] );
+					MPI_Isend(  a0+1, 1, yzplane, rk_x0, 5, MPI_COMM_WORLD, &req[8] );
+					MPI_Irecv(  a0, 1, yzplane, rk_x0, 6, MPI_COMM_WORLD, &req[9] );
 				}
 				if( rkx != px-1 && px != 1 ){
-					MPI_Isend( a0+lx, 1, yzplane, rk_x1, 6, MPI_COMM_WORLD, &req[10] );
-					MPI_Irecv( a0+lx+1, 1, yzplane, rk_x1, 5, MPI_COMM_WORLD, &req[11] );
+					MPI_Isend(  a0+lx, 1, yzplane, rk_x1, 6, MPI_COMM_WORLD, &req[10] );
+					MPI_Irecv(  a0+lx+1, 1, yzplane, rk_x1, 5, MPI_COMM_WORLD, &req[11] );
 				}
 #ifndef __partition				
 				if( rkz != 0 && pz != 1 ){
@@ -328,12 +328,12 @@ ptr_t buffer[2] = {grid, aux};
         ptr_t a1 = buffer[(t + 1) % 2];
 
 				if( rkz != 0 && pz != 1 ){
-					MPI_Isend( a0+ldy*ldx, 1, xyplane, rk_z0, 0, MPI_COMM_WORLD, &req[0] );
-					MPI_Irecv( a0, 1, xyplane, rk_z0, 1, MPI_COMM_WORLD, &req[1] );
+					MPI_Isend(  a0+ldy*ldx, 1, xyplane, rk_z0, 0, MPI_COMM_WORLD, &req[0] );
+					MPI_Irecv(  a0, 1, xyplane, rk_z0, 1, MPI_COMM_WORLD, &req[1] );
 				}
 				if( rkz != pz-1 && pz != 1 ){
-					MPI_Isend( a0+ldy*ldx*lz, 1, xyplane, rk_z1, 1, MPI_COMM_WORLD, &req[2] );
-					MPI_Irecv( a0+ldy*ldx*(lz+1), 1, xyplane, rk_z1, 0, MPI_COMM_WORLD, &req[3] );
+					MPI_Isend(  a0+ldy*ldx*lz, 1, xyplane, rk_z1, 1, MPI_COMM_WORLD, &req[2] );
+					MPI_Irecv(  a0+ldy*ldx*(lz+1), 1, xyplane, rk_z1, 0, MPI_COMM_WORLD, &req[3] );
 				}
 				
 				if( rkz != 0 && pz != 1 ){
@@ -344,12 +344,12 @@ ptr_t buffer[2] = {grid, aux};
 				}
 				
 				if( rky != 0 && py != 1 ){
-					MPI_Isend( a0+ldx, 1, xzplane, rk_y0, 2, MPI_COMM_WORLD, &req[4] );
-					MPI_Irecv( a0, 1, xzplane, rk_y0, 3, MPI_COMM_WORLD, &req[5] );
+					MPI_Isend(  a0+ldx, 1, xzplane, rk_y0, 2, MPI_COMM_WORLD, &req[4] );
+					MPI_Irecv(  a0, 1, xzplane, rk_y0, 3, MPI_COMM_WORLD, &req[5] );
 				}
 				if( rky != py-1 && py != 1 ){
-					MPI_Isend( a0+ly*ldx, 1, xzplane, rk_y1, 3, MPI_COMM_WORLD, &req[6] );
-					MPI_Irecv( a0+(ly+1)*ldx, 1, xzplane, rk_y1, 2, MPI_COMM_WORLD, &req[7] );
+					MPI_Isend(  a0+ly*ldx, 1, xzplane, rk_y1, 3, MPI_COMM_WORLD, &req[6] );
+					MPI_Irecv(  a0+(ly+1)*ldx, 1, xzplane, rk_y1, 2, MPI_COMM_WORLD, &req[7] );
 				}
 				
 				if( rky != 0 && py != 1 ){
@@ -360,12 +360,12 @@ ptr_t buffer[2] = {grid, aux};
 				}
 				
 				if( rkx != 0 && px != 1 ){
-					MPI_Isend( a0+1, 1, yzplane, rk_x0, 5, MPI_COMM_WORLD, &req[8] );
-					MPI_Irecv( a0, 1, yzplane, rk_x0, 6, MPI_COMM_WORLD, &req[9] );
+					MPI_Isend(  a0+1, 1, yzplane, rk_x0, 5, MPI_COMM_WORLD, &req[8] );
+					MPI_Irecv(  a0, 1, yzplane, rk_x0, 6, MPI_COMM_WORLD, &req[9] );
 				}
 				if( rkx != px-1 && px != 1 ){
-					MPI_Isend( a0+lx, 1, yzplane, rk_x1, 6, MPI_COMM_WORLD, &req[10] );
-					MPI_Irecv( a0+lx+1, 1, yzplane, rk_x1, 5, MPI_COMM_WORLD, &req[11] );
+					MPI_Isend(  a0+lx, 1, yzplane, rk_x1, 6, MPI_COMM_WORLD, &req[10] );
+					MPI_Irecv(  a0+lx+1, 1, yzplane, rk_x1, 5, MPI_COMM_WORLD, &req[11] );
 				}
 				
 				if( rkx != 0 && px != 1 ){

@@ -97,9 +97,9 @@ int main(int argc, char **argv) {
             double t = end - start; 
             double gflops = 1e-9 * info.global_size_x * info.global_size_y * info.global_size_z * nt * (type * 2 - 1) / t;
 
-            printf("%d-point stencil - %s:\nSize (%d x %d x %d), Timestep %d\n",type, version_name, info.global_size_x, info.global_size_y, info.global_size_z, nt);
-            printf("Preprocessing time %lfs\n", pre_time);
-            printf("Computation time %lfs, Performance %lfGflop/s\n", t, gflops);
+            printf("%d-point stencil - %s: Size (%d x %d x %d)\t",type, version_name, info.global_size_x, info.global_size_y, info.global_size_z );
+            //printf("Preprocessing time %lfs\n", pre_time);
+            printf(" Performance %lfGflop/s\n",gflops);
         }
         destroy_file_helper(&helper);
     }

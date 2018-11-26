@@ -151,7 +151,7 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
 	int neg_x_slope, pos_x_slope, neg_y_slope, pos_y_slope, neg_z_slope, pos_z_slope;
 	int blockMin_x, blockMin_y, blockMin_z;
 	int blockMax_x, blockMax_y, blockMax_z;
-	omp_set_num_threads(24);
+	//omp_set_num_threads(24);
     for(int zz = z_start; zz < z_end; zz += ZZ) {
 		neg_z_slope = 1;
 		pos_z_slope = -1;

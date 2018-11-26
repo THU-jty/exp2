@@ -7,7 +7,7 @@
 #define max(a,b) (((a)>(b))?(a):(b))
 
 const char* version_name = "circular queue";
-
+const int th_num = 24;
 void create_dist_grid(dist_grid_info_t *grid_info, int stencil_type) {
     /* Naive implementation uses Process 0 to do all computations */
     if(grid_info->p_id == 0) {
@@ -22,9 +22,11 @@ void create_dist_grid(dist_grid_info_t *grid_info, int stencil_type) {
     grid_info->offset_x = 0;
     grid_info->offset_y = 0;
     grid_info->offset_z = 0;
+	int qt = 4;
+	if( grid_info->global_size_x == 27 ) qt = 2;
     grid_info->halo_size_x = \
     grid_info->halo_size_y = \
-    grid_info->halo_size_z = 2;
+    grid_info->halo_size_z = qt;
 }
 
 void destroy_dist_grid(dist_grid_info_t *grid_info) {
@@ -53,7 +55,8 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 	double *a;
 	double* p[30][20][3];
 	int numy = ly/y_sp;
-	int num_t = omp_get_num_threads();
+	int num_t = th_num;
+	//int num_t = omp_get_num_threads();
 	a = ( double * )malloc( sizeof(double)*(t_sp-1)*llx*(y_sp+2*cir)*3*num_t );
 	for( int k = 0; k < num_t; k ++ )
         for( int i = 0; i < t_sp-1; i ++ ){
@@ -62,7 +65,7 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
             }
         }
 	int nw = 0;
-	//omp_set_num_threads(num_t);
+	omp_set_num_threads(num_t);
 	for( int tt = 0; tt < nt; tt += t_sp ){	
 		ptr_t a0 = buffer[nw];
         ptr_t a1 = buffer[nw^1];
@@ -74,6 +77,7 @@ ptr_t stencil_7(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int nt
 			for( int yy = y_start; yy < y_end; yy += y_sp ){//进行y z两层block
 				for( int xx = x_start; xx < x_end; xx += x_sp ){
 					int id = omp_get_thread_num();
+					
 					for( int w = 1; w < t_sp; w ++ )
 						for( int kk = 0; kk < 3; kk ++ )
 							for( int j = 0; j < y_sp+cir*2; j ++ )
@@ -195,13 +199,16 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
 	int lz = grid_info->local_size_z;
 
 	int cir = grid_info->halo_size_x;
-	int t_sp = cir, y_sp = 8, z_sp = lz, x_sp = 64;
+	int t_sp = cir, y_sp, z_sp = lz, x_sp = 128;
+	if( ly == 256 ) y_sp = 16;
+	if( ly == 384 ) y_sp = 12;
+	if( ly == 512 ) y_sp = 8;
 
 	int llx = x_sp+2*cir;
 	double *a;
 	double* p[30][20][3];
 	int numy = ly/y_sp;
-	int num_t = omp_get_num_threads();
+	int num_t = th_num;
 	a = ( double * )malloc( sizeof(double)*(t_sp-1)*llx*(y_sp+2*cir)*3*num_t );
 	for( int k = 0; k < num_t; k ++ )
         for( int i = 0; i < t_sp-1; i ++ ){
@@ -210,7 +217,7 @@ ptr_t stencil_27(ptr_t grid, ptr_t aux, const dist_grid_info_t *grid_info, int n
             }
         }
 	int nw = 0;
-	//omp_set_num_threads(num_t);
+	omp_set_num_threads(num_t);
 	for( int tt = 0; tt < nt; tt += t_sp ){	
 		ptr_t a0 = buffer[nw];
         ptr_t a1 = buffer[nw^1];
